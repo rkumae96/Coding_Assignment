@@ -25,6 +25,15 @@ class MultiHeadSelfAttention(nn.Module):
         self.values = nn.Linear(self.head_dim, self.head_dim, bias=False)
         self.fc_out = nn.Linear(embed_size, embed_size)
 
+    def apply_rotary_emb(qk, cos, sin):
+        return torch.einsum("bhid,bhjd->bhij", qk * cos, qk * sin)
+
+    def rotary_embedding(seq_len, dim):
+        inv_freq = 1. / (10000 ** (torch.arange(0, dim, 2).float() / dim))
+        t = torch.arange(seq_len).type_as(inv_freq)
+        sinusoid_inp = torch.einsum('i,j->ij', t, inv_freq)
+        return torch.stack((sinusoid_inp.sin(), sinusoid_inp.cos()), dim=-1)
+
     def forward(self, values, keys, query, mask):
         N = query.shape[0]
         value_len, key_len, query_len = values.shape[1], keys.shape[1], query.shape[1]
@@ -33,6 +42,12 @@ class MultiHeadSelfAttention(nn.Module):
         values = values.reshape(N, value_len, self.num_heads, self.head_dim)
         keys = keys.reshape(N, key_len, self.num_heads, self.head_dim)
         queries = query.reshape(N, query_len, self.num_heads, self.head_dim)
+
+        # Apply Rotary Positional Embedding
+        seq_length = query.size(1)
+        rotary_emb = rotary_embedding(seq_length, self.head_dim)
+        sin, cos = rotary_emb.unbind(dim=-1)
+        query, key = apply_rotary_emb(query, cos, sin), apply_rotary_emb(key, cos, sin)
 
         values = self.values(values)
         keys = self.keys(keys)
