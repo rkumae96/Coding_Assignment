@@ -81,3 +81,42 @@ The feature implementations will be scored as follows:
 
 Your work will be evaluated on the accuracy of the implementation, the depth of your analysis, and your ability to articulate the effects of these changes on the model's performance.
 
+# Task 3: Training Loop Implementation
+
+In this task, we have implemented a flexible training loop capable of running in different environments: single GPU, Distributed Data Parallel (DDP), and Fully Sharded Data Parallel (FSDP).
+
+## Features
+
+### Single GPU Training Loop
+
+The single GPU training loop is the basic form of the training loop that runs on a single GPU. The relevant script can be found in `train_single_gpu.py`, which is designed to be simple and straightforward for quick experiments or smaller models.
+
+### Distributed Data Parallel (DDP)
+
+To leverage multiple GPUs to speed up training, we've extended the single GPU training loop to a DDP training loop. This is implemented in `train_ddp.py` and follows the best practices as suggested in [PyTorch's DDP tutorial](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html).
+
+### Fully Sharded Data Parallel (FSDP)
+
+For training very large models efficiently, we've integrated FSDP into our training loop. This advanced setup shards model parameters, gradients, and optimizer states across multiple GPUs, significantly reducing the memory footprint per GPU. The implementation is available in `train_fsdp.py`. For a comprehensive understanding of FSDP, refer to [Gupta et al., 2020, Training GPT-3 Like Models on a Single Machine](https://arxiv.org/pdf/2101.06840.pdf).
+
+## Deliverable
+
+The deliverable includes three Python scripts:
+
+- `train_single_gpu.py`: The training loop for a single GPU setup.
+- `train_ddp.py`: The training loop adapted for DDP, enabling training across multiple GPUs.
+- `train_fsdp.py`: The training loop that implements FSDP for efficient training of large models.
+
+## Documentation
+
+Each script is accompanied by documentation that illustrates how to run the training loop in each setting. This documentation provides an overview of the setup and usage instructions for each training mode.
+
+## Evaluation Scheme
+
+Each feature implementation is awarded points based on functionality and compatibility with the different GPU setups:
+
+- **Single GPU**: 10 points
+- **DDP**: 10 points
+- **FSDP**: 20 points
+
+To run the training loops, ensure you have the required environment setup, which may include installing necessary libraries, configuring distributed computing environments, and preparing the dataset for model training.
