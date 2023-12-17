@@ -1,21 +1,42 @@
-Task 1: GPT-2 Model Implementation & Checkpoints
-Overview
-This part of the project focuses on the implementation of the GPT-2 small model (125 million parameters) using Python and PyTorch. Key aspects of this task include the development of multi-head self-attention mechanisms, feed-forward networks, and positional encoding, following the original GPT-2 architecture. The implementation strictly avoids the use of pre-built transformer libraries to deepen the understanding of the transformer model's inner workings.
+## Task 1 | GPT-2 Model & Checkpoints (20 Points)
 
-Implementation Details
-Model Architecture: The GPT-2 small model comprises 12 layers of transformer blocks, each including a multi-head self-attention mechanism and a point-wise feed-forward network.
-Token and Positional Embeddings: We utilize both token and positional embeddings in the model, as per the GPT-2 design. The token embeddings translate input tokens into vectors, while positional embeddings provide context about the position of tokens in the sequence.
-Custom Layers: Custom implementations of the transformer layers, including the multi-head self-attention and feed-forward network, are provided.
-Normalization: Layer normalization is applied within each transformer block and after the final output layer.
+### Objective
+The goal for Task 1 is to implement the `GPT2-small` model, which is a smaller version of the Generative Pretrained Transformer 2 (GPT-2) with approximately 125 million parameters. The implementation is done in Python using the PyTorch framework, adhering closely to the original design and architecture as described in the GPT-2 paper.
 
-Code Structure
-src/gpt2_model.py: Contains the complete implementation of the GPT-2 model, including the transformer block, attention mechanisms, and embedding layers.
-src/main.py: Demonstrates how to initialize the model, load checkpoints, and run a sample prediction.
+### Key Implementation Details
 
-Loading Checkpoints
-Pre-trained Checkpoints: The model is compatible with the original GPT-2 125M model checkpoints. Instructions for downloading these checkpoints and loading them into the model are provided.
-Checkpoint Loading: The main.py script includes an example of how to load the pre-trained GPT-2 checkpoints into our custom model implementation. This process validates the correct architecture and functioning of the model.
+- **Token and Positional Embeddings**: The model includes token embeddings that convert input tokens into vectors and positional embeddings that provide sequence position information to the model, following the GPT-2 design philosophy.
 
-Running a Sample Prediction
-The main.py file demonstrates how to run a sample text through the model to generate predictions.
-Instructions for preprocessing input text, passing it through the model, and interpreting the output are included in the script.
+- **Transformer Layers**: Each transformer layer in our model is composed of a multi-head self-attention mechanism and a point-wise feed-forward network. These layers are custom-built, without relying on pre-built transformer libraries, to facilitate a deeper understanding of their inner workings.
+
+- **Self-Attention Mechanism**: The multi-head self-attention mechanism allows the model to weigh input token importance differently, depending on the task at hand.
+
+- **Feed-Forward Networks**: After attention aggregation, a feed-forward network is applied to each position's output separately and identically.
+
+### Code Structure
+
+- `src/gpt2_model.py`: This file contains the core GPT-2 model implementation, including the embedding layers and transformer blocks.
+
+- `src/utils.py`: Utility functions for model initialization and other helper functions.
+
+- `checkpoints/`: Directory containing the original GPT-2 125M model checkpoints.
+
+- `src/main.py`: A script to demonstrate loading the model, initializing weights, and running a sample prediction to validate the implementation.
+
+### Validation
+
+To confirm the correct functioning of our model, we performed the following steps:
+
+1. Loaded the original GPT-2 125M model checkpoints into our implementation.
+2. Ran a series of sample inputs through the model to generate predictions.
+3. Compared the outputs against expected results to ensure consistency with the original GPT-2 outputs.
+
+### References
+
+- The original GPT-2 paper can be found [here](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf).
+- Andrej Karpathy’s [nanoGPT](https://github.com/karpathy/nanoGPT) repository provided inspiration for the implementation approach.
+- The [makemore](https://youtube.com/playlist?list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ&feature=shared) series on YouTube offered valuable insights into the transformer model's architecture and functionality.
+
+### Deliverables
+
+The completed Python code for the GPT-2 model is available in the `src` directory, along with scripts to verify its functioning through testing with the original GPT-2 125M checkpoints.
