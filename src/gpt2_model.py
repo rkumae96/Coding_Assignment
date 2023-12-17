@@ -1,89 +1,111 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import math
 
 class GPT2Config:
     vocab_size = 50257
     max_position_embeddings = 1024
-    n_layers = 12
-    n_heads = 12
-    n_embd = 768
-
-class GPT2Model(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.embed_tokens = nn.Embedding(config.vocab_size, config.n_embd)
-        self.embed_positions = nn.Embedding(config.max_position_embeddings, config.n_embd)
-        self.layers = nn.ModuleList([TransformerBlock(config) for _ in range(config.n_layers)])
-        self.ln_f = nn.LayerNorm(config.n_embd)
-
-    def forward(self, input_ids):
-        token_embeddings = self.embed_tokens(input_ids)  # [batch_size, seq_len, n_embd]
-        position_ids = torch.arange(0, input_ids.size(1), dtype=torch.long, device=input_ids.device)
-        position_embeddings = self.embed_positions(position_ids)  # [seq_len, n_embd]
-
-        x = token_embeddings + position_embeddings
-
-        for layer in self.layers:
-            x = layer(x)
-
-        x = self.ln_f(x)  # [batch_size, seq_len, n_embd]
-        return x
+    num_layers = 12
+    embed_size = 768
+    num_heads = 12
+    forward_expansion = 4
+    dropout_rate = 0.1
 
 class MultiHeadSelfAttention(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.key = nn.Linear(config.n_embd, config.n_embd)
-        self.query = nn.Linear(config.n_embd, config.n_embd)
-        self.value = nn.Linear(config.n_embd, config.n_embd)
-        self.out = nn.Linear(config.n_embd, config.n_embd)
-        self.n_heads = config.n_heads
+    def __init__(self, embed_size, num_heads):
+        super(MultiHeadSelfAttention, self).__init__()
+        self.embed_size = embed_size
+        self.num_heads = num_heads
+        self.head_dim = embed_size // num_heads
 
-    def forward(self, x):
-        B, T, C = x.size()
-        k = self.key(x).view(B, T, self.n_heads, C // self.n_heads).transpose(1, 2)
-        q = self.query(x).view(B, T, self.n_heads, C // self.n_heads).transpose(1, 2)
-        v = self.value(x).view(B, T, self.n_heads, C // self.n_heads).transpose(1, 2)
+        assert self.head_dim * num_heads == embed_size, "Embed size needs to be divisible by num_heads"
 
-        attn = (q @ k.transpose(-2, -1)) * (1.0 / (C // self.n_heads)**0.5)
-        attn = F.softmax(attn, dim=-1)
-        out = (attn @ v).transpose(1, 2).contiguous().view(B, T, C)
+        self.keys = nn.Linear(self.head_dim, self.head_dim, bias=False)
+        self.queries = nn.Linear(self.head_dim, self.head_dim, bias=False)
+        self.values = nn.Linear(self.head_dim, self.head_dim, bias=False)
+        self.fc_out = nn.Linear(embed_size, embed_size)
 
-        return self.out(out)
+    def forward(self, values, keys, query, mask):
+        N = query.shape[0]
+        value_len, key_len, query_len = values.shape[1], keys.shape[1], query.shape[1]
+
+        # Split the embedding into self.num_heads different pieces
+        values = values.reshape(N, value_len, self.num_heads, self.head_dim)
+        keys = keys.reshape(N, key_len, self.num_heads, self.head_dim)
+        queries = query.reshape(N, query_len, self.num_heads, self.head_dim)
+
+        values = self.values(values)
+        keys = self.keys(keys)
+        queries = self.queries(queries)
+
+        # Einsum does matrix multiplication for query*keys for each training example with each head
+        energy = torch.einsum("nqhd,nkhd->nhqk", [queries, keys])
+        if mask is not None:
+            energy = energy.masked_fill(mask == 0, float("-1e20"))
+
+        attention = torch.softmax(energy / (self.embed_size ** (1/2)), dim=3)
+
+        out = torch.einsum("nhql,nlhd->nqhd", [attention, values]).reshape(
+            N, query_len, self.embed_size
+        )
+
+        out = self.fc_out(out)
+        return out
 
 class FeedForward(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.fc1 = nn.Linear(config.n_embd, 4 * config.n_embd)
-        self.fc2 = nn.Linear(4 * config.n_embd, config.n_embd)
+    def __init__(self, embed_size, forward_expansion):
+        super(FeedForward, self).__init__()
+        self.fc1 = nn.Linear(embed_size, forward_expansion * embed_size)
+        self.fc2 = nn.Linear(forward_expansion * embed_size, embed_size)
 
     def forward(self, x):
-        return self.fc2(F.gelu(self.fc1(x)))
-
-class TransformerBlock(nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.ln1 = nn.LayerNorm(config.n_embd)
-        self.ln2 = nn.LayerNorm(config.n_embd)
-        self.attn = MultiHeadSelfAttention(config)
-        self.ff = FeedForward(config)
-
-    def forward(self, x):
-        x = x + self.attn(self.ln1(x))
-        x = x + self.ff(self.ln2(x))
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
         return x
 
-# Example usage
-if __name__ == "__main__":
-    # Define the model
-    config = GPT2Config()
-    model = GPT2Model(config)
+class TransformerBlock(nn.Module):
+    def __init__(self, embed_size, num_heads, forward_expansion, dropout):
+        super(TransformerBlock, self).__init__()
+        self.attention = MultiHeadSelfAttention(embed_size, num_heads)
+        self.norm1 = nn.LayerNorm(embed_size)
+        self.norm2 = nn.LayerNorm(embed_size)
+        self.feed_forward = FeedForward(embed_size, forward_expansion)
+        self.dropout = nn.Dropout(dropout)
 
-    # Dummy input (batch size 1, sequence length 5)
-    input_ids = torch.tensor([[464, 3290, 423, 534, 29]], dtype=torch.long)
+    def forward(self, value, key, query, mask):
+        attention = self.attention(value, key, query, mask)
+        x = self.dropout(self.norm1(attention + query))
+        forward = self.feed_forward(x)
+        out = self.dropout(self.norm2(forward + x))
+        return out
 
-    # Forward pass
-    outputs = model(input_ids)
+class GPT2(nn.Module):
+    def __init__(self, config):
+        super(GPT2, self).__init__()
+        self.embed_size = config.embed_size
+        self.word_embedding = nn.Embedding(config.vocab_size, config.embed_size)
+        self.position_embedding = nn.Embedding(config.max_position_embeddings, config.embed_size)
+        self.layers = nn.ModuleList(
+            [TransformerBlock(config.embed_size, config.num_heads, config.forward_expansion, config.dropout_rate) for _ in range(config.num_layers)]
+        )
+        self.dropout = nn.Dropout(config.dropout_rate)
+        self.fc_out = nn.Linear(config.embed_size, config.vocab_size)
 
-    # The output is a tuple with the token representations
-    print(outputs.shape)  # (batch_size, sequence_length, config.n_embd)
+    def forward(self, x, mask):
+        N, seq_length = x.shape
+        positions = torch.arange(0, seq_length).expand(N, seq_length).to(self.device)
+
+        out = self.dropout(
+            (self.word_embedding(x) + self.position_embedding(positions))
+        )
+
+        for layer in self.layers:
+            out = layer(out, out, out, mask)
+
+        out = self.fc_out(out)
+        return out
+
+    def to(self, device):
+        self.device = device
+        super().to(device)
+        return self
