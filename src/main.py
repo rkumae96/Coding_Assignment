@@ -1,44 +1,30 @@
 import torch
-from gpt2_model import GPT2Model, GPT2Config
+from gpt2_model import GPT2, GPT2Config
 
-def load_checkpoint(model, checkpoint_path):
-    # Load the weights from the checkpoint file
-    state_dict = torch.load(checkpoint_path, map_location=torch.device('cpu'))
-    
-    # If you need to remap keys in the state dict, you can do it here
-    # state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
-    
-    # Load state dict into the model
-    model.load_state_dict(state_dict)
-    print("Checkpoint loaded successfully from", checkpoint_path)
+def load_checkpoint(filepath):
+    # Load the checkpoint
+    checkpoint = torch.load(filepath, map_location='cpu')
+    return checkpoint
 
 def main():
-    # Initialize GPT-2 configuration
+    # Initialize configuration and model
     config = GPT2Config()
-    
-    # Initialize GPT-2 model
-    model = GPT2Model(config)
-    model.eval()  # Set the model to evaluation mode
-    
-    # Load pre-trained weights (this assumes you have downloaded them)
-    # Note: Replace 'path_to_checkpoint.pt' with the actual file path
-    checkpoint_path = 'path_to_checkpoint.pt'
-    load_checkpoint(model, checkpoint_path)
-    
-    # Prepare a sample input
-    # This should be a batch of token IDs, for demonstration let's assume [50256] * 5
-    # 50256 is often the token ID for <|endoftext|> in GPT-2's tokenizer
-    input_ids = torch.tensor([[50256] * 5], dtype=torch.long)
-    
-    # Get predictions (logits) from the model
-    with torch.no_grad():
-        predictions = model(input_ids)
-    
-    # Convert predictions to token IDs (greedy approach for simplicity)
-    predicted_token_ids = predictions.argmax(-1)
-    
-    # Print out the predicted token IDs
-    print("Predicted token IDs:", predicted_token_ids)
+    model = GPT2(config).to('cpu')
 
-if __name__ == "__main__":
+    # Load the original GPT-2 125M model checkpoints
+    checkpoint = load_checkpoint("path_to_gpt2_checkpoint.pth")
+    model.load_state_dict(checkpoint)
+
+    # Prepare input data. Here we need real input handling with tokenization and padding
+    # For demonstration purposes, we use dummy data
+    input_ids = torch.tensor([[50256] * config.max_position_embeddings])  # Example token IDs
+    mask = torch.ones_like(input_ids).unsqueeze(1).unsqueeze(2)  # Dummy attention mask
+
+    # Forward pass through the model
+    with torch.no_grad():
+        predictions = model(input_ids, mask)
+
+    print(predictions.shape)  # Expected shape: [batch_size, seq_length, vocab_size]
+
+if __name__ == '__main__':
     main()
