@@ -1,60 +1,56 @@
-# GPT-2 Model and Training Implementations
+# GPT-2 Model Enhancements and Training Infrastructure
 
-This repository contains custom implementations for modifying the GPT-2 model architecture and developing a flexible training loop that supports single GPU, Distributed Data Parallel (DDP), and Fully Sharded Data Parallel (FSDP) setups.
+This repository showcases a series of enhancements to the GPT-2 model architecture, along with a robust training infrastructure that accommodates various GPU setups.
 
 ## Task 1 | GPT-2 Model & Checkpoints (20 Points)
 
 ### Objective
-Implemented a `GPT2-small` model from scratch, closely following the original GPT-2 architecture. The model was adapted to work with pre-trained weights and tested for correct functionality.
+We've implemented a scaled-down version of the GPT-2 model, referred to as `GPT2-small`, with the intention to match the original GPT-2's architecture and capabilities. This implementation focuses on understanding and customizing the transformer model within the PyTorch framework.
 
 ### Key Implementation Details
-- Custom token and positional embeddings, transformer layers, and a self-attention mechanism without using pre-built libraries.
-- The model was verified by loading original GPT-2 125M checkpoints and running sample predictions.
+- **Embeddings**: The model includes token and positional embeddings, with the latter being crucial for the model to capture the sequence order of the input tokens.
+- **Transformer Layers**: Our GPT-2 model has multiple transformer layers, each comprising a multi-head self-attention mechanism and a position-wise feed-forward network, aligning with the standard transformer architecture.
+- **Attention Mechanism**: The self-attention component is designed to weigh the influence of different parts of the input sequence, which is central to the transformer's ability to handle various NLP tasks.
 
 ### Deliverables
-- `gpt2_model.py`: Core GPT-2 model implementation.
-- `main.py`: Script for model inference and validation.
-- Checkpoint directory for storing pre-trained weights.
+- `src/gpt2_model.py`: Contains the GPT-2 model's class definition, including the structure of the transformer blocks and embedding layers.
+- `src/main.py`: A sample script that demonstrates how to load pre-trained GPT-2 checkpoints into our model and perform inference.
 
 ## Task 2 | Transformer Architectural Changes (40 Points)
 
 ### Modifications
-Implemented the following architectural enhancements to the GPT-2 model:
+We introduced three significant architectural modifications to the GPT-2 model, each with the potential to enhance the model's performance in different aspects.
 
 #### Rotary Positional Embedding (15 Points)
-- Integrated Rotary Positional Embedding, improving the model's contextual understanding.
+- Replaced the original positional embeddings with Rotary Positional Embeddings to provide a more nuanced understanding of word positions within the input sequence. This change aimed to improve the model's capacity to generate contextually appropriate text.
 
 #### Group Query Attention (10 Points)
-- Added Group Query Attention to process queries in batches, potentially enhancing efficiency.
+- Introduced Group Query Attention, which processes queries in batches rather than individually. This approach is designed to optimize the computational efficiency of the attention mechanism by sharing computations across queries.
 
 #### Sliding Window Attention (15 Points)
-- Employed Sliding Window Attention to better handle longer sequences.
+- Implemented Sliding Window Attention to limit the model's focus to a fixed-size window of surrounding tokens. This modification is expected to enhance the model's ability to process longer texts by emphasizing local context.
 
 ### Evaluation Criteria
-Each feature was evaluated based on its successful implementation and impact on the model's performance and computational requirements.
+We assessed the impact of each modification on the model's size, computational demands, and overall performance. Points were awarded based on the successful integration and functionality of these changes.
 
 ## Task 3 | Training Loop Implementation (40 Points)
 
 ### Features
 
 #### Single GPU Training Loop
-- Developed a straightforward training loop for single GPU setups (`train_single_gpu.py`).
+- Developed a basic training loop (`train_single_gpu.py`) for models that can be accommodated on a single GPU. This implementation is intended to serve as a baseline and starting point for more complex training setups.
 
 #### Distributed Data Parallel (DDP)
-- Extended the training loop to support multi-GPU training using DDP (`train_ddp.py`).
+- Expanded the training loop to a DDP-compatible version (`train_ddp.py`), allowing the model to be trained on multiple GPUs in parallel. This setup is particularly useful for accelerating the training process or handling larger models that exceed the memory capacity of a single GPU.
 
 #### Fully Sharded Data Parallel (FSDP)
-- Implemented an FSDP training loop, enabling efficient training of large models by sharding parameters across GPUs (`train_fsdp.py`).
+- For training at an even larger scale, we integrated FSDP into our training loop (`train_fsdp.py`). FSDP shards the model parameters, gradients, and optimizer states across all available GPUs, drastically reducing the memory requirements per GPU and enabling the training of significantly larger models.
 
 ### Deliverables
-Three Python scripts for each training setup, complete with documentation on how to execute the training loop in different environments.
+Each training setup is encapsulated in a distinct Python script, with comprehensive documentation detailing the code's adaptation to each GPU environment.
 
 ### Evaluation Scheme
-Points were awarded based on the functionality and compatibility of the training loop with each GPU setup:
-
-- **Single GPU**: 10 points
-- **DDP**: 10 points
-- **FSDP**: 20 points
+The feature implementations were scored on their functionality and GPU compatibility, with the FSDP setup being weighted more due to its complexity and the substantial benefits it offers for large-scale model training.
 
 ## Setup and Usage
-To utilize these implementations, ensure your environment is configured correctly, including any necessary library installations and distributed computing setups. Refer to individual scripts for detailed usage instructions.
+To run these training loops, ensure that the environment is properly set up with the necessary libraries, distributed computing configurations, and datasets. The README in the repository provides detailed instructions on how to execute each training loop for different GPU environments.
