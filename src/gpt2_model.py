@@ -11,6 +11,28 @@ class GPT2Config:
     forward_expansion = 4
     dropout_rate = 0.1
 
+class GroupQueryAttention(nn.Module):
+    def __init__(self, head_dim, num_heads, group_size):
+        super(GroupQueryAttention, self).__init__()
+        self.head_dim = head_dim
+        self.num_heads = num_heads
+        self.group_size = group_size
+        self.scale = torch.sqrt(torch.FloatTensor([self.head_dim]))
+
+    def forward(self, query, key, value, mask=None):
+        B, T, _ = query.size()
+        group_query = query.view(B, T // self.group_size, self.group_size, self.num_heads, self.head_dim)
+        
+        # Group query attention computation
+        scores = torch.einsum("btghd,bkhd->btghk", [group_query, key]) / self.scale
+        if mask is not None:
+            scores = scores.masked_fill(mask == 0, float('-inf'))
+        attention = torch.softmax(scores, dim=-1)
+        out = torch.einsum("btghk,bkhd->btghd", [attention, value])
+        out = out.reshape(B, T, -1)
+        return out
+ 
+
 class MultiHeadSelfAttention(nn.Module):
     def __init__(self, embed_size, num_heads):
         super(MultiHeadSelfAttention, self).__init__()
@@ -34,6 +56,16 @@ class MultiHeadSelfAttention(nn.Module):
         sinusoid_inp = torch.einsum('i,j->ij', t, inv_freq)
         return torch.stack((sinusoid_inp.sin(), sinusoid_inp.cos()), dim=-1)
 
+    def sliding_window_mask(seq_len, window_size, device):
+    # Create a mask for the sliding window
+        mask = torch.full((seq_len, seq_len), float('-inf'), device=device)
+        for i in range(seq_len):
+            start = max(i - window_size // 2, 0)
+            end = min(i + window_size // 2 + 1, seq_len)
+            mask[i, start:end] = 0
+        return mask
+
+
     def forward(self, values, keys, query, mask):
         N = query.shape[0]
         value_len, key_len, query_len = values.shape[1], keys.shape[1], query.shape[1]
@@ -52,6 +84,15 @@ class MultiHeadSelfAttention(nn.Module):
         values = self.values(values)
         keys = self.keys(keys)
         queries = self.queries(queries)
+
+        # Apply Group Query Attention
+        group_attention = GroupQueryAttention(self.head_dim, self.num_heads, group_size=4)
+        out = group_attention(queries, keys, values, mask)
+
+         # Sliding Window Attention mask
+        window_mask = sliding_window_mask(query_len, window_size=128, device=query.device)
+        if mask is not None:
+            mask = mask + window_mask.unsqueeze(0).unsqueeze(0)
 
         # Einsum does matrix multiplication for query*keys for each training example with each head
         energy = torch.einsum("nqhd,nkhd->nhqk", [queries, keys])
