@@ -40,3 +40,44 @@ To confirm the correct functioning of our model, we performed the following step
 ### Deliverables
 
 The completed Python code for the GPT-2 model is available in the `src` directory, along with scripts to verify its functioning through testing with the original GPT-2 125M checkpoints.
+
+# Task 2 | Transformer Architectural Changes (40 Points)
+
+---
+
+Enhance the GPT-2 model by implementing and assessing transformative architectural modifications. This task challenges you to integrate advanced embedding and attention mechanisms to potentially improve the model's performance.
+
+## Modifications
+
+### Rotary Positional Embedding (15 Points)
+- Swap the standard positional embeddings with Rotary embeddings, as described by [Su et. al. RoFormer](https://arxiv.org/pdf/2104.09864.pdf).
+- Assess the impact on the model's ability to understand and generate contextually relevant text.
+
+### Group Query Attention (10 Points)
+- Apply the Group Query Attention mechanism, taking inspiration from [Ainslie et. al. GQA: Training Generalized Multi-Query Transformer](https://arxiv.org/pdf/2305.13245v2.pdf).
+- Evaluate how this modification influences the model's attention and processing capabilities.
+
+### Sliding Window Attention (15 Points)
+- Integrate Sliding Window Attention as detailed in [Beltagy et. al. Longformer](https://arxiv.org/pdf/2004.05150v2.pdf).
+- Determine its effects on the model's efficiency and accuracy in handling longer sequences.
+
+## Deliverables
+
+Submit Python code that incorporates one, two, or all the proposed changes. With each integration, critically analyze:
+
+- The alteration in model size and computational demands.
+- Any potential challenges introduced with the changes.
+- Improvements or regressions in model performance and applicability.
+
+Points will be awarded based on the successful implementation of the features.
+
+## Evaluation Criteria
+
+The feature implementations will be scored as follows:
+
+- **Rotary Positional Embedding**: 15 points
+- **Group Query Attention**: 10 points
+- **Sliding Window Attention**: 15 points
+
+Your work will be evaluated on the accuracy of the implementation, the depth of your analysis, and your ability to articulate the effects of these changes on the model's performance.
+
